@@ -26,65 +26,11 @@ The deliverables are:
 import json
 import pandas as pd
 import numpy as np
-
-# You can safely assume that `build_dataset` is correctly implemented
-def build_dataset():
-    data = [json.loads(x) for x in open("MLA_100k.jsonlines")]
-    target = lambda x: x.get("condition")
-    N = -10000
-    X_train = data[:N]
-    X_test = data[N:]
-    y_train = [target(x) for x in X_train]
-    y_test = [target(x) for x in X_test]
-    for x in X_test:
-        del x["condition"]
-    return X_train, y_train, X_test, y_test
-
-def transform_y(y):
-    """
-    Converts the y values into a binary element 1 if the condition is "used" and 0 otherwise.
-
-    Parameters:
-    ----------
-    y : list of str
-        A list of product conditions, where each value is expected to be either "used" or another condition.
-
-    Returns:
-    -------
-    list of int
-        A list of integers where each entry is 1 if the corresponding entry in `y` is "used" and 0 otherwise.
-    """
-    try:
-        return [int(v == "used") for v in y]
-    
-    except Exception as e:
-        raise Exception(f"Error in function 'transform_y': {str(e)}") from e
-
-def read_data():
-    """
-    Reads and preprocesses the training and test datasets for model input.
-
-    This function loads raw training and test data by calling `build_dataset()`, 
-    applies JSON normalization to flatten nested structures in `X_train` and `X_test`, 
-    and converts `y_train` and `y_test` to binary labels using `transform_y()`.
-
-    Returns:
-    -------
-    tuple
-        A tuple containing four elements: X_train, y_train, X_test, y_test
-    """
-    try:
-        X_train, y_train, X_test, y_test = build_dataset()
-
-        X_train = pd.json_normalize(X_train, sep='_')
-        X_test = pd.json_normalize(X_test, sep='_')
-        y_train = transform_y(y_train)
-        y_test = transform_y(y_test)
-
-        return X_train, y_train, X_test, y_test
-
-    except Exception as e:
-        raise Exception(f"Error in function 'read_data': {str(e)}") from e
+import sys
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, f1_score
+sys.path.append('../funciones')
+from funciones import funciones as func 
 
 if __name__ == "__main__":
     print("Loading dataset...")
@@ -93,9 +39,151 @@ if __name__ == "__main__":
     # y_train (y_test too) contains the labels to be predicted (new or used).
     # The label of X_train[i] is y_train[i].
     # The label of X_test[i] is y_test[i].
-    X_train, y_train, X_test, y_test = build_dataset()
+    df_X_train, y_train, df_X_test, y_test = func.build_dataset()
+
+    print(df_X_train.columns)
 
     # Insert your code below this line:
-    # ...
+    lst_drop_cols = ["thumbnail",
+                 "secure_thumbnail",
+                 "permalink",
+                 "site_id",
+                 "location_country_id",
+                 "location_country_name",
+                 "international_delivery_mode",
+                 "seller_contact",
+                 "location_zip_code",
+                 "differential_pricing",
+                 "location_open_hours",
+                 "subtitle",
+                 "listing_source",
+                 "seller_contact_webpage",
+                 "catalog_product_id",
+                 "shipping_dimensions",
+                 "seller_contact_phone2",
+                 "seller_contact_area_code2",
+                 "seller_contact_other_info",
+                 "coverage_areas",
+                 "shipping_methods",
+                 "shipping_tags",
+                 "deal_ids",
+                 "seller_address_country_id",
+                 "seller_address_search_location_neighborhood_id",
+                 "seller_address_search_location_state_id",
+                 "seller_address_search_location_city_id",
+                 "seller_address_city_id",
+                 "seller_address_state_id",
+                 "location_neighborhood_id",
+                 "location_city_id",
+                 "location_state_id",
+                 "geolocation_latitude",
+                 "geolocation_longitude",
+                 "seller_address_latitude",
+                 "seller_address_longitude",
+                 "seller_address_search_location_state_name",
+                 "seller_address_id",
+                 "seller_address_search_location_city_name",
+                 "last_updated",
+                 "start_time",
+                 "stop_time",
+                 "date_created",
+                 "descriptions",
+                 "seller_address_comment",
+                 "seller_address_address_line",
+                 "title",
+                 "seller_address_city_name",
+                 "seller_address_zip_code",
+                 "seller_address_search_location_neighborhood_name",
+                 "sub_status",
+                 "status",
+                 "currency_id",
+                 "seller_address_country_name",
+                 "seller_contact_contact",
+                 "seller_contact_area_code",
+                 "seller_contact_phone",
+                 "location_neighborhood_name",
+                 "location_longitude",
+                 "location_address_line",
+                 "location_latitude",
+                 "location_city_name",
+                 "location_state_name",
+                 "shipping_free_methods",
+                 "base_price",
+                 "original_price"]
 
+    #transformacioness
+    lst_binary_boolean_to_numeric = ["accepts_mercadopago", 
+                                        "automatic_relist", 
+                                        "shipping_local_pick_up",
+                                        "shipping_free_shipping"
+                                    ]
 
+    lst_binary_exists = ["warranty",
+                            "parent_item_id", 
+                            "official_store_id",
+                            "video_id"
+                            ]
+
+    #lst_json_binary = ["shipping_free_methods"]
+    lst_json_binary = []
+
+    dict_transform_str_is_in = {"buying_mode":(["buy_it_now"],None),
+                                "shipping_mode":(["not_specified"],None),
+                                "seller_address_state_name":(["Capital Federal"],None)}
+
+    dict_inmobiliario = {"seller_contact_email":"flg_inmobiliario"}
+
+    dict_transform_num_elements = {
+            "variations": "num_variations",
+            "attributes": "num_attributes",
+            "tags":"num_tags",
+            "pictures": "num_pictures",
+            "non_mercado_pago_payment_methods":"num_payment_methods"
+        }
+
+    list_variaciones = ["base_price","original_price"]
+
+    lst_scores = ["seller_id","category_id"]
+
+    lst_recategorizacion = ["listing_type_id",
+                            "non_mercado_pago_payment_methods"]
+
+    lst_correlacion = ["available_quantity"]
+
+    lst_outliers = ["price", "initial_quantity", "sold_quantity"]
+
+    lst_log_transform = []
+
+    transf_dataset = func.DatasetTransformer(
+                 lst_drop_cols, 
+                 lst_binary_exists, 
+                 lst_binary_boolean_to_numeric, 
+                 lst_json_binary, 
+                 lst_log_transform,
+                 dict_transform_str_is_in, 
+                 dict_inmobiliario, 
+                 dict_transform_num_elements, 
+                 lst_outliers)
+
+    df_X_train_processed = transf_dataset.fit_transform(df_X_train)
+    df_X_test_processed = transf_dataset.transform(df_X_test)
+    y_train_transform = [int(x == "used") for x in y_train]
+    y_test_transform = [int(x == "used") for x in y_test]
+
+    rf = RandomForestClassifier(random_state=123, n_jobs=-1, criterion= "gini", max_depth=23, max_features=4, n_estimators=110)
+    rf.fit(df_X_train_processed, y_train_transform)
+
+    y_pred_train = rf.predict(df_X_train_processed)
+    y_pred_test = rf.predict(df_X_test_processed)
+
+    train_accuracy = accuracy_score(y_train_transform, y_pred_train)
+    train_f1 = f1_score(y_train_transform, y_pred_train)
+    
+    test_accuracy = accuracy_score(y_test_transform, y_pred_test)
+    test_f1 = f1_score(y_test_transform, y_pred_test)
+    
+    print(f'Train Accuracy: {train_accuracy:.4f}')
+    print(f'Train F1-Score: {train_accuracy:.4f}')
+
+    print(f'Test Accuracy: {test_accuracy:.4f}')
+    print(f'Test F1-Score: {test_accuracy:.4f}')
