@@ -1,2 +1,3 @@
 *.jsonlines
 *.csv
+*__pycache__/
