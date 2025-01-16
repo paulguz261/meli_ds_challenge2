@@ -27,24 +27,102 @@ def build_dataset():
     return df_X_train, y_train, df_X_test, y_test
 
 def drop_cols(df,lst_cols):
+    """
+    Drops specified columns from a DataFrame.
+
+    Parameters:
+    ----------
+    df : pandas.DataFrame
+        The DataFrame from which columns will be removed.
+    lst_cols : list of str
+        A list of column names to be dropped from the DataFrame.
+
+    Returns:
+    -------
+    pandas.DataFrame
+        A DataFrame with the specified columns removed.
+    """
     drop_df = df.drop(columns=lst_cols)
     return drop_df
 
 def to_binary_exists(df,cols):
+    """
+    Transform the column to binary, depending on the presence of non-null values.
+
+    Parameters:
+    ----------
+    df : pandas.DataFrame
+        The DataFrame from which columns will be transformed.
+    lst_cols : list of str
+        A list of column names to be transformed from the DataFrame.
+
+    Returns:
+    -------
+    pandas.DataFrame
+        A DataFrame with the specified columns transformed.
+    """
     df[cols] = (~df[cols].isna()).astype(int)
     return df
 
 def rename_cols_to_binary_exists(df,dict_cols):
+    """
+    Renames columns in a DataFrame based on a provided dictionary and converts the renamed columns 
+    into binary indicators, indicating the existence of values.
+
+    Parameters:
+    ----------
+    df : pandas.DataFrame
+        The DataFrame containing the columns to be renamed and transformed.
+    dict_cols : dict
+        A dictionary where keys are the current column names in `df`, and values are the new column 
+        names to which they should be renamed.
+
+    Returns:
+    -------
+    pandas.DataFrame
+        The modified DataFrame with columns renamed according to `dict_cols` and converted to binary 
+        indicators (1 for non-null or non-zero values, 0 otherwise).
+    """    
     df.rename(columns=dict_cols, inplace=True)
     df = to_binary_exists(df, list(dict_cols.values()))
-
     return df
 
 def to_binary_boolean_to_numeric(df,cols):
+    """
+    Transform the column to int, columns passed should be of Boolean Type.
+
+    Parameters:
+    ----------
+    df : pandas.DataFrame
+        The DataFrame from which columns will be transformed.
+    lst_cols : list of str
+        A list of column names which should be of Boolean type.
+
+    Returns:
+    -------
+    pandas.DataFrame
+        A DataFrame with the specified columns transformed.
+    """
     df[cols] = df[cols].astype(int).fillna(0)
     return df
 
 def to_binary_exists_json(df,cols):
+    """
+    Transform the column to a binary value if the elements stored in the json format are different than null or empty, 
+    columns passed should have a json stored inside.
+
+    Parameters:
+    ----------
+    df : pandas.DataFrame
+        The DataFrame from which columns will be transformed.
+    lst_cols : list of str
+        A list of column names which should contain a json structure.
+
+    Returns:
+    -------
+    pandas.DataFrame
+        A DataFrame with the specified columns transformed.
+    """
     df[cols] = df[cols].apply(lambda x : (x.str.len().fillna(0) > 0).astype(int))
     return df
 
@@ -54,6 +132,28 @@ def log_transform(df,cols):
     return df
 
 def to_binary_str_is_in(df,dict_transform):
+    """
+    Replaces the specified columns to binary indicators based on whether the columns in the key values from the input dictionary matches, 
+    the value pair stored in the dictionary.
+
+    The naming of the new column is flg_(column_name)_(value_searched)
+    The columns passed as parameters are dropped from the returning dataframe
+
+    Parameters:
+    ----------
+    df : pandas.DataFrame
+        The DataFrame containing columns to be transformed.
+    dict_transform : dict
+        A dictionary where keys are column names in `df`, and values are the specific values to match.
+        For each key-value pair, a new binary column will be created, indicating if the value in the column 
+        matches the specified criterion (1 if match, 0 otherwise).
+
+    Returns:
+    -------
+    pandas.DataFrame
+        The DataFrame with new binary columns for each condition, and the original columns dropped.
+
+    """
     for column, (values, custom_name) in dict_transform.items():
         if len(values) == 1 and custom_name is None:
             column_name = f"flg_{column}_{values[0]}".replace(" ", "_").lower()
@@ -68,11 +168,55 @@ def to_binary_str_is_in(df,dict_transform):
     return df
 
 def transform_get_variation(df, base_column, compare_column, new_column):
+    """
+    Computes the variation between two columns in a DataFrame, assigns a sign to the result, 
+    and stores it in a new column. The comparison column is dropped from the DataFrame after processing.
+
+    Parameters:
+    ----------
+    df : pandas.DataFrame
+        The DataFrame containing the columns to compare.
+    base_column : str
+        The name of the column that serves as the base for the comparison.
+    compare_column : str
+        The name of the column to be compared against the `base_column`.
+    new_column : str
+        The name of the new column where the sign of the variation is stored.
+        The values in this column will represent:
+        - 1: If `base_column` > `compare_column`.
+        - -1: If `base_column` < `compare_column`.
+        - 0: If `base_column` == `compare_column` or for missing values.
+
+    Returns:
+    -------
+    pandas.DataFrame
+        The modified DataFrame with the new column added and the `compare_column` removed.
+    """
     df[new_column] = (np.sign(df[base_column] - df[compare_column])).fillna(0)
     df.drop(columns=[compare_column], inplace=True)
     return df
 
 def transform_num_elements_json(df,dict_transformations,drop=True):
+    """
+    Transform the column to a number that represents the number elements stored in the json format, 
+    columns passed should have a json stored inside.
+
+    the column given as a parameter will be eliminated from the returning df
+
+    Parameters:
+    ----------
+    df : pandas.DataFrame
+        The DataFrame from which columns will be transformed.
+    col : str
+        column name which should contain a json structure.
+    new_name : str
+        name of the new column to be created
+
+    Returns:
+    -------
+    pandas.DataFrame
+        A DataFrame with the specified columns transformed.
+    """
     for original_column, config in dict_transformations.items():
             if isinstance(config, tuple):
                 new_column, drop = config
@@ -87,6 +231,28 @@ def transform_num_elements_json(df,dict_transformations,drop=True):
     return df
 
 def transform_payment_methods(df,drop=True):
+    """
+    Transforms the payment methods in a DataFrame into categorical columns by mapping specific 
+    payment method descriptions to standardized categories. Optionally drops the original 
+    `non_mercado_pago_payment_methods` column.
+
+    Parameters:
+    ----------
+    df : pandas.DataFrame
+        The DataFrame containing at least the following columns:
+        - `id`: A unique identifier for each entry.
+        - `non_mercado_pago_payment_methods`: A list-like column with payment method details 
+          in a JSON-like structure.
+
+    drop : bool, optional, default=True
+        Indicates whether to drop the `non_mercado_pago_payment_methods` column from the output DataFrame.
+
+    Returns:
+    -------
+    pandas.DataFrame
+        The transformed DataFrame with binary columns for each payment method category. Each column 
+        contains 0 or 1, indicating the absence or presence of the respective payment method for each `id`.
+    """
     dict_metodos_de_pago = {
         "Acordar con el comprador": "efectivo_o_acuerdo",
         "Efectivo": "efectivo_o_acuerdo",
@@ -132,6 +298,23 @@ def transform_payment_methods(df,drop=True):
     return df
 
 def transform_listing_type(df):
+    """
+    Encodes the listing type of each product with a numeric score based on a predefined mapping.
+
+    This function maps each unique `listing_type_id` in the DataFrame to a corresponding numeric score, 
+    which represents the listing's quality or priority level. The mapping is defined by `dict_transform_listing_type`. 
+    If a `listing_type_id` does not match any key in the mapping, it is assigned a default score of 0.
+
+    Parameters:
+    ----------
+    df : pandas.DataFrame
+        The DataFrame containing a `listing_type_id` column, which holds the listing type for each product.
+
+    Returns:
+    -------
+    pandas.DataFrame
+        The DataFrame with the `listing_type_id` column transformed to numeric scores.
+    """
     dict_transform_listing_type = {'free':0,
                                'bronze':1,
                                'silver':2,
@@ -173,6 +356,31 @@ class sellerIdTransformer(BaseEstimator, TransformerMixin):
         return X_copy
 
 class CategoryIdPopularityTransformer(BaseEstimator, TransformerMixin):
+    """
+    A transformer for calculating a seller's "used item score" based on the proportion of used items 
+    sold by each seller and mapping it back to the input DataFrame. Optionally drops the `seller_id` 
+    column after transformation.
+
+    Parameters:
+    ----------
+    drop_column : bool, optional, default=True
+        Determines whether the `seller_id` column is dropped from the DataFrame after transformation.
+
+    Attributes:
+    ----------
+    dict_seller : dict
+        A dictionary where keys are `seller_id` values and values are the computed "used item scores" 
+        (proportion of used items sold by each seller).
+
+    Methods:
+    -------
+    fit(X, y=None):
+        Computes the "used item scores" for each seller based on the input DataFrame.
+
+    transform(X):
+        Maps the precomputed "used item scores" to the input DataFrame and optionally drops the 
+        `seller_id` column. Raises a `ValueError` if the transformer is not fitted.
+    """    
     def __init__(self, drop_category_id=True):
         self.drop_category_id = drop_category_id
         self.dict_category_popularity = None
@@ -202,6 +410,31 @@ class CategoryIdPopularityTransformer(BaseEstimator, TransformerMixin):
         return X_copy
 
 class CategoryIdTransformer(BaseEstimator, TransformerMixin):
+    """
+    A transformer that calculates a normalized score for each `category_id` based on the 
+    frequency of occurrences in the input DataFrame. Optionally drops the `category_id` column 
+    after transformation.
+
+    Parameters:
+    ----------
+    drop_category_id : bool, optional, default=True
+        Determines whether the `category_id` column is dropped from the DataFrame after transformation.
+
+    Attributes:
+    ----------
+    dict_category : dict
+        A dictionary where keys are `category_id` values and values are the normalized scores 
+        (frequency of the `category_id` relative to the most frequent `category_id`).
+
+    Methods:
+    -------
+    fit(X, y=None):
+        Computes the normalized scores for each `category_id` based on its frequency in the input DataFrame.
+
+    transform(X):
+        Maps the precomputed normalized scores to the `category_id` values in the input DataFrame and 
+        optionally drops the `category_id` column. Raises a `ValueError` if the transformer is not fitted.
+    """
     def __init__(self, drop_category_id=True):
         self.drop_category_id = drop_category_id
         self.dict_category = None
@@ -227,6 +460,33 @@ class CategoryIdTransformer(BaseEstimator, TransformerMixin):
         return X_copy
 
 class FlgOutlierTransformer(BaseEstimator, TransformerMixin):
+    """
+    A transformer that identifies outliers in specified numeric columns based on the 
+    Interquartile Range (IQR) method. It creates binary flag columns indicating the presence 
+    of outliers for each specified column.
+
+    Parameters:
+    ----------
+    lst_columns : list of str
+        A list of column names in the DataFrame for which outliers will be identified.
+
+    Attributes:
+    ----------
+    dict_upper_lower_bounds : dict
+        A dictionary containing the calculated lower and upper bounds for each column 
+        in `lst_columns`. The keys are column names, and the values are lists of the form 
+        `[lower_bound, upper_bound]`.
+
+    Methods:
+    -------
+    fit(X, y=None):
+        Calculates the IQR and determines the lower and upper bounds for each column in `lst_columns`.
+
+    transform(X):
+        Flags outliers in the specified columns by comparing their values to the calculated bounds. 
+        Adds binary columns prefixed with `flg_outliers_` for each column in `lst_columns` to the DataFrame.
+        Raises a `ValueError` if the transformer is not properly initialized or fitted.
+    """
     def __init__(self, lst_columns):
         self.dict_upper_lower_bounds = None
         self.lst_columns = lst_columns
@@ -266,6 +526,55 @@ class FlgOutlierTransformer(BaseEstimator, TransformerMixin):
         return X_transformed
     
 class DatasetTransformer(BaseEstimator, TransformerMixin):
+    """
+    A comprehensive transformer for applying multiple preprocessing transformations to a dataset, 
+    including feature engineering, binary transformations, and sub-transformer applications. 
+    This class is designed to automate extensive data preparation for machine learning models.
+
+    Parameters:
+    ----------
+    lst_drop_cols : list of str
+        A list of column names to be dropped from the dataset.
+    lst_binary_exists : list of str
+        A list of columns to transform into binary indicators based on the presence of values.
+    lst_binary_boolean_to_numeric : list of str
+        A list of boolean columns to convert into numeric values (1 for True, 0 for False).
+    lst_json_binary : list of str
+        A list of columns containing JSON data to transform into binary indicators.
+    lst_log_transform : list of str
+        A list of numeric columns to apply log transformation to.
+    dict_transform_str_is_in : dict
+        A dictionary mapping column names to values, used to create binary flags if a value 
+        exists in the column.
+    dict_inmobiliario : dict
+        A dictionary mapping column names to new column names for real estate-related features 
+        (transformed to binary indicators).
+    dict_transform_num_elements : dict
+        A dictionary where keys represent JSON-like columns, and values are numerical thresholds 
+        to be transformed.
+    lst_outliers : list of str
+        A list of numeric columns for which outlier detection will be performed using IQR bounds.
+
+    Attributes:
+    ----------
+    trans_seller_id : sellerIdTransformer
+        A transformer for calculating and mapping seller scores based on item conditions.
+    trans_categ_id_popularity : CategoryIdPopularityTransformer
+        A transformer that calculates and maps category popularity based on item frequency.
+    trans_categ_id : CategoryIdTransformer
+        A transformer for normalizing category ID scores based on item frequencies.
+    trans_flg_outliers : FlgOutlierTransformer
+        A transformer for identifying and flagging outliers in specified numeric columns.
+
+    Methods:
+    -------
+    fit(X, y=None):
+        Fits all sub-transformers using the provided dataset.
+
+    transform(X):
+        Applies all specified transformations to the dataset, including column transformations, 
+        sub-transformers, and feature engineering. Returns the transformed dataset.
+    """
     def __init__(self, 
                  lst_drop_cols, 
                  lst_binary_exists, 
