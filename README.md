@@ -13,8 +13,8 @@ Se cuenta distintos archivos y con 4 carpetas, descritas a continuacion.
   * `03.model_tunning.iptnb`: contiene la evaluacion de modelos de clasifficacion binaria para predecir si un item es nuevo o usado, su conclusion es la eleccion de un modelo de prediccion que tiene el mejor desempeño segun las metricas estipuladas enel mismo.
 * `imagenes` carpeta que contiene las imagenes empleadas en los notebooks de la carpeta anterior
 ### Archivos
-*`.gitignore`: archivo con los archivos que no se les hace seguimiento en el repo
-*`new_or_used.py`: codigo python con la transformacion de los datos, entrenamiento del modelo y calculo de estadisticas de desempeño
-*`requirements.txt`: documento con los requisiros de librerias para el modelo
+* `.gitignore`: archivo con los archivos que no se les hace seguimiento en el repo
+* `new_or_used.py`: codigo python con la transformacion de los datos, entrenamiento del modelo y calculo de estadisticas de desempeño
+* `requirements.txt`: documento con los requisiros de librerias para el modelo
 
 
