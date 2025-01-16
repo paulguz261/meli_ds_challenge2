@@ -22,16 +22,14 @@ The deliverables are:
 
 
 """
-
-import json
 import pandas as pd
 import numpy as np
 import sys
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
-from sklearn.ensemble import StackingClassifier
+from sklearn.ensemble import StackingClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import accuracy_score, precision_score
 
 sys.path.append('../funciones')
 from funciones import funciones as func 
@@ -179,14 +177,14 @@ if __name__ == "__main__":
         ("xg", XGBClassifier(learning_rate=0.41, max_depth=6,n_estimators=104,reg_lambda = 1, reg_alpha= 1)),
         ("rf", RandomForestClassifier(random_state=123, n_jobs=-1, criterion= "gini", max_depth=23, max_features=4, n_estimators=110))
     ]
-    stack = StackingClassifier(estimators=estimators, final_estimator=LogisticRegression(random_state=123, n_jobs=-1))
+    vote = VotingClassifier(estimators=estimators, voting="soft", n_jobs=-1)
     
     print("fitting model ...")
-    stack.fit(df_X_train_processed, y_train_transform)
+    vote.fit(df_X_train_processed, y_train_transform)
 
     print("Predicting model ...")
-    y_pred_train = stack.predict(df_X_train_processed)
-    y_pred_test = stack.predict(df_X_test_processed)
+    y_pred_train = vote.predict(df_X_train_processed)
+    y_pred_test = vote.predict(df_X_test_processed)
 
     train_accuracy = accuracy_score(y_train_transform, y_pred_train)
     train_f1 = precision_score(y_train_transform, y_pred_train)
