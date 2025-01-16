@@ -28,7 +28,11 @@ import pandas as pd
 import numpy as np
 import sys
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, f1_score
+from xgboost import XGBClassifier
+from sklearn.ensemble import StackingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+
 sys.path.append('../funciones')
 from funciones import funciones as func 
 
@@ -40,8 +44,6 @@ if __name__ == "__main__":
     # The label of X_train[i] is y_train[i].
     # The label of X_test[i] is y_test[i].
     df_X_train, y_train, df_X_test, y_test = func.build_dataset()
-
-    print(df_X_train.columns)
 
     # Insert your code below this line:
     lst_drop_cols = ["thumbnail",
@@ -171,19 +173,31 @@ if __name__ == "__main__":
     y_test_transform = [int(x == "used") for x in y_test]
 
     rf = RandomForestClassifier(random_state=123, n_jobs=-1, criterion= "gini", max_depth=23, max_features=4, n_estimators=110)
-    rf.fit(df_X_train_processed, y_train_transform)
+    # rf.fit(df_X_train_processed, y_train_transform)
+    
+    estimators = [
+        ("xg", XGBClassifier(learning_rate=0.41, max_depth=6,n_estimators=104,reg_lambda = 1, reg_alpha= 1)),
+        ("rf", RandomForestClassifier(random_state=123, n_jobs=-1, criterion= "gini", max_depth=23, max_features=4, n_estimators=110))
+    ]
+    stack = StackingClassifier(estimators=estimators, final_estimator=LogisticRegression(random_state=123, n_jobs=-1))
+    
+    print("fitting model ...")
+    stack.fit(df_X_train_processed, y_train_transform)
 
-    y_pred_train = rf.predict(df_X_train_processed)
-    y_pred_test = rf.predict(df_X_test_processed)
+    print("Predicting model ...")
+    y_pred_train = stack.predict(df_X_train_processed)
+    y_pred_test = stack.predict(df_X_test_processed)
 
     train_accuracy = accuracy_score(y_train_transform, y_pred_train)
-    train_f1 = f1_score(y_train_transform, y_pred_train)
+    train_f1 = precision_score(y_train_transform, y_pred_train)
     
     test_accuracy = accuracy_score(y_test_transform, y_pred_test)
-    test_f1 = f1_score(y_test_transform, y_pred_test)
+    test_f1 = precision_score(y_test_transform, y_pred_test)
     
+    print("Calculating Metrics ...")
     print(f'Train Accuracy: {train_accuracy:.4f}')
-    print(f'Train F1-Score: {train_accuracy:.4f}')
+    print(f'Train Precision: {train_accuracy:.4f}')
 
     print(f'Test Accuracy: {test_accuracy:.4f}')
-    print(f'Test F1-Score: {test_accuracy:.4f}')
+    print(f'Test Precision: {test_accuracy:.4f}')
+
